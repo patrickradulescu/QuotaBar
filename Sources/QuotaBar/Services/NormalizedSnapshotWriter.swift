@@ -26,7 +26,7 @@ enum NormalizedSnapshotWriter {
                 ofItemAtPath: directory.path
             )
             let envelope = Envelope(
-                schemaVersion: 1,
+                schemaVersion: 2,
                 generatedAt: Date(),
                 providers: ProviderKind.allCases.compactMap { provider in
                     guard let usage = snapshots[provider] else { return nil }
@@ -35,6 +35,7 @@ enum NormalizedSnapshotWriter {
                         state: usage.state,
                         primary: usage.primary,
                         secondary: usage.secondary,
+                        namedWeeklyLimits: usage.namedWeeklyLimits,
                         observedAt: usage.observedAt,
                         detail: nil
                     )

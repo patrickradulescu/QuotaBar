@@ -37,11 +37,22 @@ public struct UsageWindow: Codable, Equatable, Sendable {
     }
 }
 
+public struct NamedUsageWindow: Codable, Equatable, Sendable {
+    public let label: String
+    public let window: UsageWindow
+
+    public init(label: String, window: UsageWindow) {
+        self.label = label
+        self.window = window
+    }
+}
+
 public struct ProviderUsage: Codable, Equatable, Sendable {
     public let provider: ProviderKind
     public let state: ProviderState
     public let primary: UsageWindow?
     public let secondary: UsageWindow?
+    public let namedWeeklyLimits: [NamedUsageWindow]?
     public let observedAt: Date
     public let detail: String?
 
@@ -50,6 +61,7 @@ public struct ProviderUsage: Codable, Equatable, Sendable {
         state: ProviderState,
         primary: UsageWindow? = nil,
         secondary: UsageWindow? = nil,
+        namedWeeklyLimits: [NamedUsageWindow]? = nil,
         observedAt: Date = Date(),
         detail: String? = nil
     ) {
@@ -57,6 +69,7 @@ public struct ProviderUsage: Codable, Equatable, Sendable {
         self.state = state
         self.primary = primary
         self.secondary = secondary
+        self.namedWeeklyLimits = namedWeeklyLimits
         self.observedAt = observedAt
         self.detail = detail
     }

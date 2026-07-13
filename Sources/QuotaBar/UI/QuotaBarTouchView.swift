@@ -81,7 +81,9 @@ private final class ProviderPillView: NSView {
     }
 
     func update(_ usage: ProviderUsage) {
-        titleLabel.stringValue = provider.displayName.uppercased()
+        titleLabel.stringValue = provider == .claude
+            ? "CLAUDE · 5H"
+            : provider.displayName.uppercased()
 
         guard usage.state == .live, let primary = usage.primary else {
             percentLabel.stringValue = usage.state == .loading ? "…" : "—"
@@ -95,7 +97,18 @@ private final class ProviderPillView: NSView {
         let remaining = Int(primary.remainingPercent.rounded())
         percentLabel.stringValue = "\(used)%"
 
-        if let secondary = usage.secondary {
+        if provider == .claude {
+            var details = ["\(remaining)% LEFT"]
+            if let weekly = usage.secondary {
+                details.append("WK \(Int(weekly.usedPercent.rounded()))%")
+            }
+            if let fable = usage.namedWeeklyLimits?.first(where: {
+                $0.label.caseInsensitiveCompare("Fable") == .orderedSame
+            }) {
+                details.append("FABLE \(Int(fable.window.usedPercent.rounded()))%")
+            }
+            detailLabel.stringValue = details.joined(separator: " · ")
+        } else if let secondary = usage.secondary {
             detailLabel.stringValue = "\(remaining)% LEFT · \(Int(secondary.usedPercent.rounded()))% \(secondary.compactWindowLabel)"
         } else {
             detailLabel.stringValue = "\(remaining)% LEFT · \(primary.compactWindowLabel)"
