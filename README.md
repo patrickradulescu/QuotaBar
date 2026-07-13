@@ -6,6 +6,8 @@ QuotaBar is a small macOS menu-bar app that shows AI usage on the Touch Bar only
 ![Swift](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-22c55e)
 
+[English](#quotabar) · [ภาษาไทย](#ภาษาไทย)
+
 ## What it does
 
 - Shows used and remaining quota with a compact progress bar.
@@ -91,3 +93,124 @@ QuotaBar does not contain source code, artwork, resources, credentials, or decom
 ## License
 
 MIT © 2026 Patrick Radulescu.
+
+---
+
+## ภาษาไทย
+
+QuotaBar เป็นแอปเมนูบาร์ขนาดเล็กสำหรับ MacBook Pro ที่มี Touch Bar ใช้แสดงปริมาณโควตา AI ที่ใช้ไปและเหลืออยู่ โดยแถบจะแสดงเฉพาะตอนที่เปิดใช้งาน Codex/ChatGPT หรือ Claude Desktop อยู่ด้านหน้า เมื่อเปลี่ยนไป Safari หรือแอปอื่น QuotaBar จะคืน Touch Bar ให้ระบบตามปกติ
+
+โปรเจกต์นี้เป็น clean-room implementation ซอร์สโค้ดและงานภาพสร้างขึ้นใหม่ทั้งหมด ไม่ได้คัดลอก source, resource หรือ decompiled output จากแอปอื่น
+
+### ตัวเลขบน Touch Bar หมายถึงอะไร
+
+| ข้อความ | ความหมาย |
+| --- | --- |
+| `CODEX` | เปอร์เซ็นต์โควตา Codex ที่ใช้ไปและเหลืออยู่ตามข้อมูลจาก Codex app-server |
+| `CLAUDE · 5H` | โควตา Claude ของรอบปัจจุบัน 5 ชั่วโมง ตัวเลขใหญ่คือเปอร์เซ็นต์ที่ใช้ไป |
+| `LEFT` | เปอร์เซ็นต์ที่ยังเหลือในรอบ 5 ชั่วโมงของ Claude |
+| `WK` | เปอร์เซ็นต์โควตา Claude รายสัปดาห์รวมทุกโมเดลที่ใช้ไป |
+| `FABLE` | เปอร์เซ็นต์โควตา Claude รายสัปดาห์เฉพาะโมเดล Fable ที่ใช้ไป |
+
+ตัวอย่าง:
+
+```text
+CLAUDE · 5H  3%
+97% LEFT · WK 13% · FABLE 25%
+```
+
+### สิ่งที่ต้องมีก่อนติดตั้ง
+
+- MacBook Pro ที่มี Touch Bar และใช้ macOS 13 ขึ้นไป
+- Xcode Command Line Tools หรือ Swift 6 สำหรับ build จาก source
+- แอปหรือ CLI ทางการของ Codex และ/หรือ Claude Code ที่เข้าสู่ระบบเรียบร้อยแล้ว
+
+หากยังไม่มี Command Line Tools ให้เปิด Terminal แล้วรัน:
+
+```bash
+xcode-select --install
+```
+
+ควรเปิด Codex CLI และ Claude Code อย่างน้อยหนึ่งครั้งเพื่อเข้าสู่ระบบและทำขั้นตอนเริ่มต้นของผู้ให้บริการให้เสร็จก่อนใช้ QuotaBar
+
+### วิธีติดตั้ง
+
+เปิด Terminal แล้วรัน:
+
+```bash
+git clone https://github.com/patrickradulescu/QuotaBar.git
+cd QuotaBar
+./scripts/install-local.sh
+```
+
+สคริปต์จะ build แอปแบบ Universal สำหรับทั้ง Apple silicon และ Intel ติดตั้งไว้ที่ `/Applications/QuotaBar.app` และเปิดแอปให้โดยอัตโนมัติ
+
+หากต้องการใช้ source ของ release 0.2.0 โดยตรง:
+
+```bash
+git clone https://github.com/patrickradulescu/QuotaBar.git
+cd QuotaBar
+git checkout v0.2.0
+./scripts/install-local.sh
+```
+
+### วิธีใช้งาน
+
+1. เปิด QuotaBar แล้วมองหาไอคอนรูปมาตรวัดบน menu bar
+2. เปิด Codex/ChatGPT หรือ Claude Desktop ให้เป็นแอปด้านหน้า
+3. QuotaBar จะแสดงเปอร์เซ็นต์บน Touch Bar และอัปเดตข้อมูลเป็นระยะ
+4. เมื่อเปลี่ยนไป Safari หรือแอปอื่น แถบ QuotaBar จะหายและ Touch Bar ปกติจะกลับมา
+5. หากต้องการให้เปิดพร้อมเครื่อง ให้เลือก **Launch at Login** จากเมนูรูปมาตรวัด
+6. กด **Refresh Now** จากเมนูเดียวกันเมื่อต้องการขอข้อมูลล่าสุดทันที
+
+หาก provider แสดง `OFFLINE` ให้ตรวจว่าได้ติดตั้งและเข้าสู่ระบบ CLI ทางการของ provider นั้นแล้ว จากนั้นเปิด CLI ให้ผ่านหน้า setup อย่างน้อยหนึ่งครั้ง
+
+### วิธีส่งให้คนอื่นใช้
+
+ส่งลิงก์ repository นี้ให้ผู้ใช้:
+
+```text
+https://github.com/patrickradulescu/QuotaBar
+```
+
+จากนั้นให้เขาทำตามหัวข้อ **สิ่งที่ต้องมีก่อนติดตั้ง** และ **วิธีติดตั้ง** ด้านบน รุ่นนี้เผยแพร่แบบ source-only จึงยังไม่มีไฟล์ `.dmg` หรือ binary สำหรับกดติดตั้งทันที ผู้ใช้แต่ละคนจะ build แอปบนเครื่องของตัวเอง
+
+สามารถส่งลิงก์ release โดยตรงได้ที่:
+
+```text
+https://github.com/patrickradulescu/QuotaBar/releases/tag/v0.2.0
+```
+
+### ความเป็นส่วนตัวและความปลอดภัย
+
+QuotaBar ไม่ขอ Full Disk Access, Accessibility, Screen Recording, Input Monitoring, Automation, สิทธิ์ administrator หรือรหัสผ่านของผู้ใช้
+
+- เรียกเฉพาะ executable ทางการของ provider จากตำแหน่งที่กำหนดและตรวจลายเซ็นก่อนใช้งาน
+- ไม่อ่านไฟล์ OAuth, cookie, database หรือ container ของแอปอื่น
+- ไม่บันทึก raw terminal output ลงดิสก์
+- เก็บเฉพาะสถานะ เปอร์เซ็นต์ และเวลา reset ที่ผ่านการ normalize แล้วใน `~/Library/Application Support/QuotaBar/status.json`
+- ไม่มี analytics, telemetry, automatic updater หรือ server ของ QuotaBar
+
+Claude Code อาจอัปเดต session/history ของตัวเองเมื่อใช้คำสั่ง `/usage` แต่ข้อมูลส่วนนั้นถูกจัดการโดย CLI ทางการของ Anthropic และ QuotaBar ไม่ได้เปิดอ่านไฟล์ดังกล่าว
+
+อ่าน threat model ฉบับเต็มได้ที่ [SECURITY.md](SECURITY.md)
+
+### ข้อจำกัดปัจจุบัน
+
+- Gemini ยังปิดการเก็บข้อมูลไว้จนกว่าจะแยก hooks, extensions, skills และ MCP ตอนเริ่ม CLI ได้อย่างปลอดภัย
+- การแสดง Touch Bar ข้ามแอปใช้ private AppKit selector ที่แยกไว้เฉพาะจุด จึงไม่รองรับ Mac App Store และอาจต้องปรับหลัง macOS อัปเดต
+- GitHub Release ปัจจุบันเป็น source-only หากจะแจก binary ให้ผู้ใช้ทั่วไปควรใช้ Developer ID signing และ notarization ก่อน
+
+### ถอนการติดตั้ง
+
+ปิด **Launch at Login**, เลือก **Quit QuotaBar** แล้วรัน:
+
+```bash
+rm -rf /Applications/QuotaBar.app
+rm -rf "$HOME/Library/Application Support/QuotaBar"
+rm -rf "$HOME/Library/Caches/com.patrickradulescu.QuotaBar"
+```
+
+### สัญญาอนุญาต
+
+MIT © 2026 Patrick Radulescu
