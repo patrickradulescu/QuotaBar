@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Test
+        run: swift test
+      - name: Build release
+        run: swift build -c release
+      - name: Package universal app
+        run: ./scripts/build-app.sh
+      - name: Verify app bundle
+        run: |
+          plutil -lint dist/QuotaBar.app/Contents/Info.plist
+          test "$(lipo -archs dist/QuotaBar.app/Contents/MacOS/QuotaBar)" = "x86_64 arm64"
+          codesign --verify --deep --strict --verbose=4 dist/QuotaBar.app
