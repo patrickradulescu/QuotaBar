@@ -75,14 +75,16 @@ final class UsageCoordinator {
         manuallyRefreshingProviders.forEach { providers[$0]?.refresh() }
 
         manualRefreshTimer?.invalidate()
-        manualRefreshTimer = Timer.scheduledTimer(
-            withTimeInterval: Self.manualRefreshLifetime,
+        let timer = Timer(
+            timeInterval: Self.manualRefreshLifetime,
             repeats: false
         ) { [weak self] _ in
             guard let self else { return }
             self.manuallyRefreshingProviders.removeAll()
             self.reconcileProviderLifecycle()
         }
+        manualRefreshTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     func stop() {
@@ -115,13 +117,15 @@ final class UsageCoordinator {
             refreshTimer?.invalidate()
             refreshTimer = nil
         } else if refreshTimer == nil {
-            refreshTimer = Timer.scheduledTimer(
-                withTimeInterval: 60,
+            let timer = Timer(
+                timeInterval: 60,
                 repeats: true
             ) { [weak self] _ in
                 guard let self else { return }
                 self.activeProviders.forEach { self.providers[$0]?.refresh() }
             }
+            refreshTimer = timer
+            RunLoop.main.add(timer, forMode: .common)
         }
     }
 

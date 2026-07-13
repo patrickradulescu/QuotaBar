@@ -3,6 +3,20 @@ import os
 import QuotaBarCore
 
 final class GlobalTouchBarController {
+    private struct ApplicationIdentity: Equatable {
+        let bundleIdentifier: String
+        let processIdentifier: pid_t
+
+        init?(_ application: NSRunningApplication?) {
+            guard let application, let bundleIdentifier = application.bundleIdentifier else {
+                return nil
+            }
+            self.bundleIdentifier = bundleIdentifier
+            processIdentifier = application.processIdentifier
+        }
+    }
+
+    private static let reconciliationInterval: TimeInterval = 2
     private let logger = Logger(
         subsystem: "com.patrickradulescu.QuotaBar",
         category: "touchbar"
@@ -33,6 +47,8 @@ final class GlobalTouchBarController {
     var onActiveProvidersChange: ((Set<ProviderKind>) -> Void)?
 
     private var workspaceObservers: [NSObjectProtocol] = []
+    private var frontmostReconciliationTimer: Timer?
+    private var lastFrontmostIdentity: ApplicationIdentity?
     private var terminalMonitorTimer: Timer?
     private var terminalProbeGeneration = 0
     private var terminalProbeInFlight = false
@@ -54,7 +70,7 @@ final class GlobalTouchBarController {
         ) { [weak self] notification in
             let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey]
                 as? NSRunningApplication
-            self?.frontmostApplicationDidChange(application)
+            self?.handleFrontmostApplicationChange(application)
         })
 
         [
@@ -83,13 +99,30 @@ final class GlobalTouchBarController {
             })
         }
 
-        frontmostApplicationDidChange(NSWorkspace.shared.frontmostApplication)
+        reconcileFrontmostApplication(force: true)
+
+        // NSWorkspace can briefly report nil/the launching LSUIElement while
+        // applicationDidFinishLaunching runs. A lightweight identity watchdog
+        // repairs a missed startup activation and any later lost notification
+        // without repeatedly restarting providers for an unchanged app.
+        let timer = Timer(
+            fire: Date().addingTimeInterval(0.5),
+            interval: Self.reconciliationInterval,
+            repeats: true
+        ) { [weak self] _ in
+            self?.reconcileFrontmostApplication()
+        }
+        frontmostReconciliationTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     func stop() {
         let center = NSWorkspace.shared.notificationCenter
         workspaceObservers.forEach(center.removeObserver)
         workspaceObservers.removeAll()
+        frontmostReconciliationTimer?.invalidate()
+        frontmostReconciliationTimer = nil
+        lastFrontmostIdentity = nil
         stopTerminalMonitoring()
         setActiveProviders([])
         dismiss()
@@ -97,6 +130,21 @@ final class GlobalTouchBarController {
 
     func update(_ snapshots: [ProviderKind: ProviderUsage]) {
         touchBarDelegate.update(snapshots)
+    }
+
+    private func reconcileFrontmostApplication(force: Bool = false) {
+        guard sessionIsAvailable else { return }
+        let application = NSWorkspace.shared.frontmostApplication
+        let identity = ApplicationIdentity(application)
+        guard force || identity != lastFrontmostIdentity else { return }
+        handleFrontmostApplicationChange(application)
+    }
+
+    private func handleFrontmostApplicationChange(
+        _ application: NSRunningApplication?
+    ) {
+        lastFrontmostIdentity = ApplicationIdentity(application)
+        frontmostApplicationDidChange(application)
     }
 
     private func frontmostApplicationDidChange(_ application: NSRunningApplication?) {
@@ -122,6 +170,7 @@ final class GlobalTouchBarController {
 
     private func sessionDidBecomeUnavailable() {
         sessionIsAvailable = false
+        lastFrontmostIdentity = nil
         stopTerminalMonitoring()
         setActiveProviders([])
         dismiss()
@@ -129,7 +178,7 @@ final class GlobalTouchBarController {
 
     private func sessionDidBecomeAvailable() {
         sessionIsAvailable = true
-        frontmostApplicationDidChange(NSWorkspace.shared.frontmostApplication)
+        reconcileFrontmostApplication(force: true)
     }
 
     private func setActiveProviders(_ providers: Set<ProviderKind>) {
@@ -143,12 +192,14 @@ final class GlobalTouchBarController {
         setActiveProviders([])
         dismiss()
         probeFrontmostTerminal()
-        terminalMonitorTimer = Timer.scheduledTimer(
-            withTimeInterval: 1.5,
+        let timer = Timer(
+            timeInterval: 1.5,
             repeats: true
         ) { [weak self] _ in
             self?.probeFrontmostTerminal()
         }
+        terminalMonitorTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     private func stopTerminalMonitoring() {

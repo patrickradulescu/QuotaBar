@@ -2,6 +2,18 @@
 
 All notable changes to QuotaBar are documented here.
 
+## [0.4.1] - 2026-07-14
+
+### Fixed
+
+- Reconciled the actual frontmost application shortly after launch and every two seconds, so QuotaBar recovers when macOS misses the activation notification for an app that was already open during startup.
+- Compared both bundle identifier and process identifier during reconciliation, avoiding provider restarts while still detecting an app relaunch with the same bundle identifier.
+- Moved provider refresh, manual-refresh expiry, terminal monitoring, and frontmost reconciliation timers to the common run-loop modes so opening a menu no longer pauses lifecycle maintenance.
+
+### Changed
+
+- Bumped the app version to 0.4.1 (build 5).
+
 ## [0.4.0] - 2026-07-14
 
 ### Added
@@ -74,6 +86,7 @@ All notable changes to QuotaBar are documented here.
 - App-scoped Touch Bar presentation for Codex/ChatGPT and Claude Desktop.
 - Signed provider CLI verification, minimal helper environments, and sanitized local status caching.
 
+[0.4.1]: https://github.com/patrickradulescu/QuotaBar/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/patrickradulescu/QuotaBar/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/patrickradulescu/QuotaBar/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/patrickradulescu/QuotaBar/compare/da73a91...v0.2.0

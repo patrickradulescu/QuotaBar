@@ -170,12 +170,12 @@ cd QuotaBar
 
 สคริปต์จะ build แอปแบบ Universal สำหรับทั้ง Apple silicon และ Intel ติดตั้งไว้ที่ `/Applications/QuotaBar.app` และเปิดแอปให้โดยอัตโนมัติ
 
-หากต้องการใช้ source ของ release 0.4.0 โดยตรง:
+หากต้องการใช้ source ของ release 0.4.1 โดยตรง:
 
 ```bash
 git clone https://github.com/patrickradulescu/QuotaBar.git
 cd QuotaBar
-git checkout v0.4.0
+git checkout v0.4.1
 ./scripts/install-local.sh
 ```
 
@@ -214,7 +214,7 @@ https://github.com/patrickradulescu/QuotaBar
 สามารถส่งลิงก์ release โดยตรงได้ที่:
 
 ```text
-https://github.com/patrickradulescu/QuotaBar/releases/tag/v0.4.0
+https://github.com/patrickradulescu/QuotaBar/releases/tag/v0.4.1
 ```
 
 ### ความเป็นส่วนตัวและความปลอดภัย

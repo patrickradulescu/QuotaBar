@@ -414,7 +414,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "0.4.0"
+            ?? "0.4.1"
     }
 
     private static func formatPercent(_ value: Double) -> String {

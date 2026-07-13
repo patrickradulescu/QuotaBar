@@ -298,6 +298,6 @@ final class CodexAppServerClient: UsageProviderClient {
 
 private enum AppVersion {
     static var current: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.1"
     }
 }
