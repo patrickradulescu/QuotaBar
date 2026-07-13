@@ -171,7 +171,7 @@ final class UsageCoordinator {
         geminiExpiryTimer = nil
         snapshots[.gemini] = .actionRequired(
             .gemini,
-            detail: "AGY quota is stale — open AGY to refresh"
+            detail: AgyQuotaUsageDetail.stale
         )
     }
 }

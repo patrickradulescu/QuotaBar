@@ -2,6 +2,18 @@
 
 All notable changes to QuotaBar are documented here.
 
+## [0.4.2] - 2026-07-14
+
+### Fixed
+
+- Replaced the ambiguous permanent **AGY Quota Setup…** label with explicit checking, connected, refresh-needed, and first-time setup states.
+- Kept **Reconnect AGY Quota…** available after a successful or stale report without implying that the bridge is unconfigured.
+- Centralized AGY refresh/setup guidance so cache lifecycle and menu presentation cannot silently drift to different wording.
+
+### Changed
+
+- Bumped the app version to 0.4.2 (build 6).
+
 ## [0.4.1] - 2026-07-14
 
 ### Fixed
@@ -86,6 +98,7 @@ All notable changes to QuotaBar are documented here.
 - App-scoped Touch Bar presentation for Codex/ChatGPT and Claude Desktop.
 - Signed provider CLI verification, minimal helper environments, and sanitized local status caching.
 
+[0.4.2]: https://github.com/patrickradulescu/QuotaBar/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/patrickradulescu/QuotaBar/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/patrickradulescu/QuotaBar/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/patrickradulescu/QuotaBar/compare/v0.2.0...v0.3.0
