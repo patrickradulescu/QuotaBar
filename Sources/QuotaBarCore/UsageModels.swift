@@ -17,6 +17,7 @@ public enum ProviderKind: String, Codable, CaseIterable, Sendable {
 public enum ProviderState: String, Codable, Sendable {
     case loading
     case live
+    case actionRequired
     case unavailable
     case error
 }
@@ -80,6 +81,10 @@ public struct ProviderUsage: Codable, Equatable, Sendable {
 
     public static func unavailable(_ provider: ProviderKind, detail: String) -> ProviderUsage {
         ProviderUsage(provider: provider, state: .unavailable, detail: detail)
+    }
+
+    public static func actionRequired(_ provider: ProviderKind, detail: String) -> ProviderUsage {
+        ProviderUsage(provider: provider, state: .actionRequired, detail: detail)
     }
 
     public static func failed(_ provider: ProviderKind, detail: String) -> ProviderUsage {

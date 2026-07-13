@@ -22,9 +22,13 @@ This project is an original implementation. It does not include source code, art
 
 - ChatGPT/Codex: `com.openai.codex`
 - Claude Desktop: `com.anthropic.claudefordesktop`
-- Gemini: activation/parser reserved; collection disabled until CLI startup isolation is proven
+- Google Antigravity: `com.google.antigravity` and `com.google.antigravity-ide`; the Google-signed bundle is detected and the user is directed to Settings → Models because no supported headless quota API exists
 
 Browser-tab detection is intentionally excluded because it would require browser integration or Accessibility access.
+
+## Update boundary
+
+`Check for Updates…` uses an ephemeral `URLSession` to read GitHub's public latest-release JSON. Version comparison and release-URL validation live in `QuotaBarCore`; only stable tags and the canonical repository release path are accepted. The checker opens the release page but never downloads, extracts, executes, or replaces an app bundle. Automatic installation is deferred until the project has Developer ID signing, Apple notarization, and signed update metadata.
 
 ## Helper lifecycle
 
