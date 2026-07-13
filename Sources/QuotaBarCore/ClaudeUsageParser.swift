@@ -16,15 +16,12 @@ public enum ClaudeUsageParser {
             throw ParseError.missingSessionUsage
         }
 
-        let weekIndex = lines.indices.first(where: { index in
-            let line = lines[index].lowercased()
-            guard line.contains("current week") else { return false }
-            return !line.contains("fable") && !line.contains("opus") && !line.contains("sonnet")
-        })
+        let weekIndex = lines.indices.first(where: { isAllModelsHeading(lines[$0]) })
 
         let primaryReset = resetDate(after: sessionIndex, in: lines, now: observedAt)
         let secondaryPercent = weekIndex.flatMap { percent(after: $0, in: lines) }
         let secondaryReset = weekIndex.flatMap { resetDate(after: $0, in: lines, now: observedAt) }
+        let namedWeeklyLimits = namedWeeklyLimits(in: lines, now: observedAt)
 
         return ProviderUsage(
             provider: .claude,
@@ -37,8 +34,59 @@ public enum ClaudeUsageParser {
             secondary: secondaryPercent.map {
                 UsageWindow(usedPercent: $0, windowMinutes: 10_080, resetsAt: secondaryReset)
             },
+            namedWeeklyLimits: namedWeeklyLimits.isEmpty ? nil : namedWeeklyLimits,
             observedAt: observedAt
         )
+    }
+
+    private static func isAllModelsHeading(_ line: String) -> Bool {
+        let lowercased = line.lowercased()
+        if lowercased == "all models" || lowercased.hasPrefix("all models ") {
+            return true
+        }
+        guard lowercased.contains("current week") else { return false }
+        return !["fable", "opus", "sonnet"].contains(where: lowercased.contains)
+    }
+
+    private static func namedWeeklyLimits(in lines: [String], now: Date) -> [NamedUsageWindow] {
+        var limits: [NamedUsageWindow] = []
+        var seenLabels: Set<String> = []
+
+        for index in lines.indices {
+            guard let label = modelLabel(from: lines[index]),
+                  seenLabels.insert(label.lowercased()).inserted,
+                  let usedPercent = percent(after: index, in: lines) else {
+                continue
+            }
+
+            limits.append(NamedUsageWindow(
+                label: label,
+                window: UsageWindow(
+                    usedPercent: usedPercent,
+                    windowMinutes: 10_080,
+                    resetsAt: resetDate(after: index, in: lines, now: now)
+                )
+            ))
+        }
+        return limits
+    }
+
+    private static func modelLabel(from line: String) -> String? {
+        let knownLabels = ["Fable", "Opus", "Sonnet"]
+        let lowercased = line.lowercased()
+        if let exact = knownLabels.first(where: {
+            lowercased == $0.lowercased() || lowercased.hasPrefix("\($0.lowercased()) ")
+        }) {
+            return exact
+        }
+
+        guard let parenthesized = firstMatch(#"current week\s*\(([^)]+)\)"#, in: line),
+              parenthesized.caseInsensitiveCompare("all models") != .orderedSame else {
+            return nil
+        }
+        return knownLabels.first(where: {
+            parenthesized.localizedCaseInsensitiveContains($0)
+        })
     }
 
     private static func percent(after index: Int, in lines: [String]) -> Double? {
@@ -78,6 +126,10 @@ public enum ClaudeUsageParser {
         }
         value = normalizeWhitespace(value)
 
+        if let relative = relativeResetDate(value, now: now) {
+            return relative
+        }
+
         let locale = Locale(identifier: "en_US_POSIX")
         if value.range(of: #"[A-Za-z]{3}\s+[0-9]{1,2}\s+at"#, options: .regularExpression) != nil {
             let calendar = Calendar(identifier: .gregorian)
@@ -94,6 +146,10 @@ public enum ClaudeUsageParser {
                 date = nextYear
             }
             return date
+        }
+
+        if let weekday = weekdayResetDate(value, now: now, timeZone: timeZone) {
+            return weekday
         }
 
         let formatter = DateFormatter()
@@ -119,6 +175,74 @@ public enum ClaudeUsageParser {
             result = calendar.date(byAdding: .day, value: 1, to: result) ?? result
         }
         return result
+    }
+
+    private static func relativeResetDate(_ value: String, now: Date) -> Date? {
+        guard value.lowercased().hasPrefix("in ") else { return nil }
+
+        let days = firstMatch(#"([0-9]+)\s*(?:d|day|days)\b"#, in: value).flatMap(Int.init) ?? 0
+        let hours = firstMatch(#"([0-9]+)\s*(?:h|hr|hrs|hour|hours)\b"#, in: value).flatMap(Int.init) ?? 0
+        let minutes = firstMatch(#"([0-9]+)\s*(?:m|min|mins|minute|minutes)\b"#, in: value).flatMap(Int.init) ?? 0
+        guard days + hours + minutes > 0 else { return nil }
+
+        return Calendar(identifier: .gregorian).date(
+            byAdding: DateComponents(day: days, hour: hours, minute: minutes),
+            to: now
+        )
+    }
+
+    private static func weekdayResetDate(
+        _ value: String,
+        now: Date,
+        timeZone: TimeZone
+    ) -> Date? {
+        guard let weekdayName = firstMatch(
+            #"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b"#,
+            in: value
+        ), let clock = firstMatch(
+            #"^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(.+)$"#,
+            in: value
+        ) else {
+            return nil
+        }
+
+        let weekdays = [
+            "sun": 1, "mon": 2, "tue": 3, "wed": 4,
+            "thu": 5, "fri": 6, "sat": 7
+        ]
+        guard let weekday = weekdays[weekdayName.lowercased()],
+              let time = parseClock(clock, timeZone: timeZone) else {
+            return nil
+        }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let clockComponents = calendar.dateComponents([.hour, .minute], from: time)
+        var target = DateComponents()
+        target.calendar = calendar
+        target.timeZone = timeZone
+        target.weekday = weekday
+        target.hour = clockComponents.hour
+        target.minute = clockComponents.minute
+        return calendar.nextDate(
+            after: now,
+            matching: target,
+            matchingPolicy: .nextTime,
+            direction: .forward
+        )
+    }
+
+    private static func parseClock(_ value: String, timeZone: TimeZone) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        for format in ["h:mm a", "h:mma", "h a", "ha"] {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: value) {
+                return date
+            }
+        }
+        return nil
     }
 
     private static func normalizeWhitespace(_ string: String) -> String {

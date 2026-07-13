@@ -149,6 +149,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             let used = Int(primary.usedPercent.rounded())
             let remaining = Int(primary.remainingPercent.rounded())
+            if provider == .claude {
+                var parts = ["5H \(used)% used", "\(remaining)% left"]
+                if let weekly = usage.secondary {
+                    parts.append("week all \(Int(weekly.usedPercent.rounded()))%")
+                }
+                if let fable = usage.namedWeeklyLimits?.first(where: {
+                    $0.label.caseInsensitiveCompare("Fable") == .orderedSame
+                }) {
+                    parts.append("Fable \(Int(fable.window.usedPercent.rounded()))%")
+                }
+                return "Claude: " + parts.joined(separator: " · ")
+            }
             return "\(provider.displayName): \(used)% used · \(remaining)% left"
         case .unavailable:
             return "\(provider.displayName): Not configured"

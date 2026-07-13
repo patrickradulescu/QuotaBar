@@ -9,7 +9,8 @@ QuotaBar is a small macOS menu-bar app that shows AI usage on the Touch Bar only
 ## What it does
 
 - Shows used and remaining quota with a compact progress bar.
-- Appears for Codex/ChatGPT and Claude Desktop. A Gemini activation slot is reserved but disabled in the first release.
+- Labels Claude's five-hour session, all-model weekly limit, and Fable weekly limit separately.
+- Appears for Codex/ChatGPT and Claude Desktop. A Gemini activation slot is reserved but disabled in the current release.
 - Dismisses immediately when you switch to Safari or another unrelated app.
 - Keeps one menu-bar process alive; it does not replace the normal Touch Bar permanently.
 - Offers a menu-bar fallback when the private Touch Bar presenter is unavailable.
@@ -24,7 +25,7 @@ QuotaBar is a small macOS menu-bar app that shows AI usage on the Touch Bar only
 
 QuotaBar never implements provider authentication. Sign in with each supported provider's official app or CLI first.
 
-Gemini remains disabled in v0.1 because Gemini CLI can initialize user hooks, extensions, skills, and MCP servers before showing quota. It will be enabled only after those startup integrations can be isolated reliably without copying or reading Google credentials.
+Gemini remains disabled in v0.2 because Gemini CLI can initialize user hooks, extensions, skills, and MCP servers before showing quota. It will be enabled only after those startup integrations can be isolated reliably without copying or reading Google credentials.
 
 ## Privacy and security
 
