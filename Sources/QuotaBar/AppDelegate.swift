@@ -66,15 +66,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(item)
         }
 
-        let agySetup = NSMenuItem(
-            title: snapshots[.gemini]?.state == .live
-                ? "AGY Quota Setup…"
-                : "Set Up AGY Quota…",
-            action: #selector(setUpAgyQuota),
-            keyEquivalent: ""
+        let agyPresentation = AgyQuotaMenuPresentation(
+            usage: snapshots[.gemini]
         )
-        agySetup.target = self
-        menu.addItem(agySetup)
+        if let statusTitle = agyPresentation.statusTitle {
+            let status = NSMenuItem(
+                title: statusTitle,
+                action: nil,
+                keyEquivalent: ""
+            )
+            status.isEnabled = false
+            menu.addItem(status)
+        }
+        if let actionTitle = agyPresentation.actionTitle {
+            let action = NSMenuItem(
+                title: actionTitle,
+                action: #selector(setUpAgyQuota),
+                keyEquivalent: ""
+            )
+            action.target = self
+            menu.addItem(action)
+        }
 
         // Keep the official UI fallback available even when the bridge is live
         // or a future AGY payload no longer parses.
@@ -414,7 +426,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "0.4.1"
+            ?? "0.4.2"
     }
 
     private static func formatPercent(_ value: Double) -> String {

@@ -88,8 +88,8 @@ final class AgyQuotaCacheClient: UsageProviderClient {
                 publish(.actionRequired(
                     .gemini,
                     detail: cacheExists
-                        ? "Open AGY to refresh quota"
-                        : "Set up AGY quota from the menu"
+                        ? AgyQuotaUsageDetail.openToRefresh
+                        : AgyQuotaUsageDetail.setUpFromMenu
                 ), runGeneration: runGeneration)
             } else if AntigravityApplicationLocator.locate() != nil {
                 publish(.actionRequired(

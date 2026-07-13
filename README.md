@@ -73,6 +73,8 @@ The installer builds a universal (Apple silicon + Intel), ad-hoc-signed local ap
 3. Paste that `/statusline …QuotaBarAgyBridge` command into the AGY prompt and press Return.
 4. Keep AGY running when you want recent Gemini values. QuotaBar shows the last report emitted by AGY, rejects cache data older than 30 minutes, and falls back to setup/manual guidance. It does not guarantee that the value matches the Antigravity GUI between callbacks.
 
+After a valid report arrives, the menu shows **AGY Quota: Connected ✓** and changes the setup action to **Reconnect AGY Quota…**. If the cached report becomes stale, it shows **AGY Quota: Open AGY to Refresh** instead of incorrectly asking you to set up the bridge again.
+
 Setup is explicit because AGY supports one active statusline command; the command replaces AGY's built-in/default statusline or any existing custom statusline. Run `/statusline delete` in AGY to disconnect QuotaBar and restore AGY's default statusline. QuotaBar never edits AGY's settings file itself.
 
 When Terminal, iTerm2, Ghostty, WezTerm, Warp, Kitty, or Alacritty is frontmost, QuotaBar checks only same-user process ancestry and the AGY Developer ID signature. It never reads terminal text or commands. Detection is app/process-tree scoped rather than active-tab scoped: an AGY process in any tab or window belonging to the frontmost terminal app can activate QuotaBar even when a different tab is visible. A detached AGY process whose parent is a tmux/server process may not be recognized.
@@ -170,12 +172,12 @@ cd QuotaBar
 
 สคริปต์จะ build แอปแบบ Universal สำหรับทั้ง Apple silicon และ Intel ติดตั้งไว้ที่ `/Applications/QuotaBar.app` และเปิดแอปให้โดยอัตโนมัติ
 
-หากต้องการใช้ source ของ release 0.4.1 โดยตรง:
+หากต้องการใช้ source ของ release 0.4.2 โดยตรง:
 
 ```bash
 git clone https://github.com/patrickradulescu/QuotaBar.git
 cd QuotaBar
-git checkout v0.4.1
+git checkout v0.4.2
 ./scripts/install-local.sh
 ```
 
@@ -192,6 +194,8 @@ git checkout v0.4.1
 9. ใช้ **Open Antigravity Models…** ดูค่าจากหน้าทางการได้เสมอ และใช้ `/statusline delete` ใน AGY เมื่อต้องการยกเลิกการเชื่อมต่อ
 
 AGY รองรับ statusline command ที่ทำงานอยู่ได้หนึ่งตัว การตั้งค่านี้จึงแทนที่ statusline มาตรฐานของ AGY หรือ custom statusline เดิม QuotaBar ไม่แก้ไฟล์ settings ของ AGY ให้อัตโนมัติ ผู้ใช้เป็นผู้วางคำสั่งและยืนยันเอง ใช้ `/statusline delete` เพื่อยกเลิกการเชื่อมต่อและกลับไปใช้ statusline มาตรฐาน
+
+เมื่อรับข้อมูลสำเร็จ เมนูจะแสดง **AGY Quota: Connected ✓** และเปลี่ยนคำสั่งเป็น **Reconnect AGY Quota…** หากข้อมูลเก่า เมนูจะแสดง **AGY Quota: Open AGY to Refresh** แทนการบอกให้ตั้งค่าใหม่
 
 หาก provider แสดง `OFFLINE` ให้ตรวจว่าได้ติดตั้งและเข้าสู่ระบบ CLI ทางการของ provider นั้นแล้ว จากนั้นเปิด CLI ให้ผ่านหน้า setup อย่างน้อยหนึ่งครั้ง
 
@@ -214,7 +218,7 @@ https://github.com/patrickradulescu/QuotaBar
 สามารถส่งลิงก์ release โดยตรงได้ที่:
 
 ```text
-https://github.com/patrickradulescu/QuotaBar/releases/tag/v0.4.1
+https://github.com/patrickradulescu/QuotaBar/releases/tag/v0.4.2
 ```
 
 ### ความเป็นส่วนตัวและความปลอดภัย
