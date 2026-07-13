@@ -10,18 +10,35 @@ final class GlobalTouchBarController {
     private let allowedBundleIdentifiers: Set<String> = [
         "com.openai.codex",
         "com.anthropic.claudefordesktop",
-        "com.google.Gemini",
         "com.google.antigravity",
         "com.google.antigravity-ide"
+    ]
+    private let terminalBundleIdentifiers: Set<String> = [
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "com.mitchellh.ghostty",
+        "com.github.wez.wezterm",
+        "dev.warp.Warp-Stable",
+        "net.kovidgoyal.kitty",
+        "org.alacritty"
     ]
 
     private let touchBarDelegate = QuotaTouchBarDelegate()
     private lazy var touchBar: NSTouchBar = touchBarDelegate.makeTouchBar()
-    var onEligibilityChange: ((Bool) -> Void)?
+    private let agyProcessMonitor = AgyProcessMonitor()
+    private let agyProcessQueue = DispatchQueue(
+        label: "com.patrickradulescu.quotabar.agy-process-monitor",
+        qos: .utility
+    )
+    var onActiveProvidersChange: ((Set<ProviderKind>) -> Void)?
 
     private var workspaceObservers: [NSObjectProtocol] = []
+    private var terminalMonitorTimer: Timer?
+    private var terminalProbeGeneration = 0
+    private var terminalProbeInFlight = false
+    private var frontmostTerminalPID: pid_t?
     private var isPresented = false
-    private var isEligible = false
+    private var activeProviders = Set<ProviderKind>()
     private var sessionIsAvailable = true
 
     var isSupported: Bool { PrivateTouchBarBridge.isSupported }
@@ -73,7 +90,8 @@ final class GlobalTouchBarController {
         let center = NSWorkspace.shared.notificationCenter
         workspaceObservers.forEach(center.removeObserver)
         workspaceObservers.removeAll()
-        setEligible(false)
+        stopTerminalMonitoring()
+        setActiveProviders([])
         dismiss()
     }
 
@@ -82,25 +100,30 @@ final class GlobalTouchBarController {
     }
 
     private func frontmostApplicationDidChange(_ application: NSRunningApplication?) {
+        stopTerminalMonitoring()
         guard sessionIsAvailable,
               let bundleIdentifier = application?.bundleIdentifier else {
-            setEligible(false)
+            setActiveProviders([])
             dismiss()
             return
         }
 
         if allowedBundleIdentifiers.contains(bundleIdentifier) {
-            setEligible(true)
+            setActiveProviders(Set(ProviderKind.allCases))
             present()
+        } else if terminalBundleIdentifiers.contains(bundleIdentifier),
+                  let application {
+            startTerminalMonitoring(processIdentifier: application.processIdentifier)
         } else {
-            setEligible(false)
+            setActiveProviders([])
             dismiss()
         }
     }
 
     private func sessionDidBecomeUnavailable() {
         sessionIsAvailable = false
-        setEligible(false)
+        stopTerminalMonitoring()
+        setActiveProviders([])
         dismiss()
     }
 
@@ -109,10 +132,66 @@ final class GlobalTouchBarController {
         frontmostApplicationDidChange(NSWorkspace.shared.frontmostApplication)
     }
 
-    private func setEligible(_ eligible: Bool) {
-        guard eligible != isEligible else { return }
-        isEligible = eligible
-        onEligibilityChange?(eligible)
+    private func setActiveProviders(_ providers: Set<ProviderKind>) {
+        guard providers != activeProviders else { return }
+        activeProviders = providers
+        onActiveProvidersChange?(providers)
+    }
+
+    private func startTerminalMonitoring(processIdentifier: pid_t) {
+        frontmostTerminalPID = processIdentifier
+        setActiveProviders([])
+        dismiss()
+        probeFrontmostTerminal()
+        terminalMonitorTimer = Timer.scheduledTimer(
+            withTimeInterval: 1.5,
+            repeats: true
+        ) { [weak self] _ in
+            self?.probeFrontmostTerminal()
+        }
+    }
+
+    private func stopTerminalMonitoring() {
+        terminalMonitorTimer?.invalidate()
+        terminalMonitorTimer = nil
+        frontmostTerminalPID = nil
+        terminalProbeGeneration += 1
+        terminalProbeInFlight = false
+    }
+
+    private func probeFrontmostTerminal() {
+        guard sessionIsAvailable,
+              !terminalProbeInFlight,
+              let terminalPID = frontmostTerminalPID else {
+            return
+        }
+
+        terminalProbeInFlight = true
+        terminalProbeGeneration += 1
+        let generation = terminalProbeGeneration
+        agyProcessQueue.async { [weak self] in
+            guard let self else { return }
+            let isAgyActive = self.agyProcessMonitor.hasVerifiedAgyDescendant(
+                of: terminalPID
+            )
+            DispatchQueue.main.async { [weak self] in
+                guard let self,
+                      generation == self.terminalProbeGeneration,
+                      self.frontmostTerminalPID == terminalPID else {
+                    return
+                }
+                self.terminalProbeInFlight = false
+                if isAgyActive {
+                    // A terminal AGY session authorizes only the Gemini cache
+                    // reader. It must never launch Codex or Claude probes.
+                    self.setActiveProviders([.gemini])
+                    self.present()
+                } else {
+                    self.setActiveProviders([])
+                    self.dismiss()
+                }
+            }
+        }
     }
 
     private func present() {

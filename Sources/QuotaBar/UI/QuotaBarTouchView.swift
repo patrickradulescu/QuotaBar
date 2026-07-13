@@ -81,9 +81,16 @@ private final class ProviderPillView: NSView {
     }
 
     func update(_ usage: ProviderUsage) {
-        titleLabel.stringValue = provider == .claude
-            ? "CLAUDE · 5H"
-            : provider.displayName.uppercased()
+        if provider == .claude {
+            titleLabel.stringValue = "CLAUDE · 5H"
+        } else if provider == .gemini,
+                  let primary = usage.primary {
+            titleLabel.stringValue = primary.windowMinutes == 300
+                ? "GEMINI · 5H"
+                : "GEMINI · 1W"
+        } else {
+            titleLabel.stringValue = provider.displayName.uppercased()
+        }
 
         guard usage.state == .live, let primary = usage.primary else {
             percentLabel.stringValue = usage.state == .loading ? "…" : "—"
@@ -94,11 +101,14 @@ private final class ProviderPillView: NSView {
                 dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
                 progressView.update(usedPercent: 0, tint: .systemGray)
             case .actionRequired:
-                detailLabel.stringValue = "OPEN MODELS"
+                detailLabel.stringValue = provider == .gemini
+                    && usage.detail?.localizedCaseInsensitiveContains("set up") == true
+                    ? "SET UP AGY"
+                    : "OPEN MODELS"
                 dotView.layer?.backgroundColor = NSColor.systemBlue.cgColor
                 progressView.update(usedPercent: 0, tint: .systemBlue)
             case .unavailable:
-                detailLabel.stringValue = provider == .gemini ? "NOT INSTALLED" : "OFFLINE"
+                detailLabel.stringValue = provider == .gemini ? "NO AGY" : "OFFLINE"
                 dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
                 progressView.update(usedPercent: 0, tint: .systemGray)
             case .error:
@@ -115,7 +125,9 @@ private final class ProviderPillView: NSView {
 
         let used = Int(primary.usedPercent.rounded())
         let remaining = Int(primary.remainingPercent.rounded())
-        percentLabel.stringValue = "\(used)%"
+        percentLabel.stringValue = provider == .gemini
+            ? "\(Self.formatPercent(primary.usedPercent))%"
+            : "\(used)%"
 
         if provider == .claude {
             var details = ["\(remaining)% LEFT"]
@@ -126,6 +138,12 @@ private final class ProviderPillView: NSView {
                 $0.label.caseInsensitiveCompare("Fable") == .orderedSame
             }) {
                 details.append("FABLE \(Int(fable.window.usedPercent.rounded()))%")
+            }
+            detailLabel.stringValue = details.joined(separator: " · ")
+        } else if provider == .gemini {
+            var details = ["\(Self.formatPercent(primary.remainingPercent))% LEFT"]
+            if let weekly = usage.secondary {
+                details.append("WK \(Self.formatPercent(weekly.usedPercent))%")
             }
             detailLabel.stringValue = details.joined(separator: " · ")
         } else if let secondary = usage.secondary {
@@ -196,6 +214,17 @@ private final class ProviderPillView: NSView {
         case .claude: return NSColor(calibratedRed: 0.91, green: 0.51, blue: 0.30, alpha: 1)
         case .gemini: return NSColor(calibratedRed: 0.36, green: 0.60, blue: 1.00, alpha: 1)
         }
+    }
+
+    private static func formatPercent(_ value: Double) -> String {
+        let clamped = min(max(value, 0), 100)
+        if clamped > 0, clamped < 1 {
+            return String(format: "%.2f", clamped)
+        }
+        if clamped != clamped.rounded() {
+            return String(format: "%.1f", clamped)
+        }
+        return String(Int(clamped))
     }
 }
 
