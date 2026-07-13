@@ -11,10 +11,11 @@ cd "$ROOT"
 ARM_TRIPLE="arm64-apple-macosx13.0"
 INTEL_TRIPLE="x86_64-apple-macosx13.0"
 
-swift build -c release --triple "$ARM_TRIPLE" --product QuotaBar
-swift build -c release --triple "$INTEL_TRIPLE" --product QuotaBar
-swift build -c release --triple "$ARM_TRIPLE" --product QuotaBarAgyBridge
-swift build -c release --triple "$INTEL_TRIPLE" --product QuotaBarAgyBridge
+# Build every executable for one architecture in a single SwiftPM graph. Some
+# SwiftPM releases reuse an incompatible product-specific build description
+# when products are requested sequentially for the same cross-build triple.
+swift build -c release --triple "$ARM_TRIPLE"
+swift build -c release --triple "$INTEL_TRIPLE"
 
 ARM_BIN_DIR="$(swift build -c release --triple "$ARM_TRIPLE" --show-bin-path)"
 INTEL_BIN_DIR="$(swift build -c release --triple "$INTEL_TRIPLE" --show-bin-path)"
