@@ -87,9 +87,29 @@ private final class ProviderPillView: NSView {
 
         guard usage.state == .live, let primary = usage.primary else {
             percentLabel.stringValue = usage.state == .loading ? "…" : "—"
-            detailLabel.stringValue = usage.state == .error ? "ERROR" : "OFFLINE"
-            dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
-            progressView.update(usedPercent: 0, tint: .systemGray)
+
+            switch usage.state {
+            case .loading:
+                detailLabel.stringValue = "LOADING"
+                dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
+                progressView.update(usedPercent: 0, tint: .systemGray)
+            case .actionRequired:
+                detailLabel.stringValue = "OPEN MODELS"
+                dotView.layer?.backgroundColor = NSColor.systemBlue.cgColor
+                progressView.update(usedPercent: 0, tint: .systemBlue)
+            case .unavailable:
+                detailLabel.stringValue = provider == .gemini ? "NOT INSTALLED" : "OFFLINE"
+                dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
+                progressView.update(usedPercent: 0, tint: .systemGray)
+            case .error:
+                detailLabel.stringValue = "ERROR"
+                dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
+                progressView.update(usedPercent: 0, tint: .systemGray)
+            case .live:
+                detailLabel.stringValue = "LIVE"
+                dotView.layer?.backgroundColor = NSColor.systemGray.cgColor
+                progressView.update(usedPercent: 0, tint: .systemGray)
+            }
             return
         }
 

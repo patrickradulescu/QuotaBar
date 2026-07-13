@@ -10,7 +10,9 @@ final class GlobalTouchBarController {
     private let allowedBundleIdentifiers: Set<String> = [
         "com.openai.codex",
         "com.anthropic.claudefordesktop",
-        "com.google.Gemini"
+        "com.google.Gemini",
+        "com.google.antigravity",
+        "com.google.antigravity-ide"
     ]
 
     private let touchBarDelegate = QuotaTouchBarDelegate()

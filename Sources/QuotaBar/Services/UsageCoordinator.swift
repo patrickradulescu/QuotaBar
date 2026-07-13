@@ -7,7 +7,7 @@ final class UsageCoordinator {
     private(set) var snapshots: [ProviderKind: ProviderUsage] = [
         .codex: .loading(.codex),
         .claude: .loading(.claude),
-        .gemini: .unavailable(.gemini, detail: "Provider not configured")
+        .gemini: .loading(.gemini)
     ]
 
     private let providers: [UsageProviderClient]
@@ -16,7 +16,11 @@ final class UsageCoordinator {
     private var isEligibleApplicationActive = false
     private var providersAreRunning = false
 
-    init(providers: [UsageProviderClient] = [CodexAppServerClient(), ClaudeUsageClient()]) {
+    init(providers: [UsageProviderClient] = [
+        CodexAppServerClient(),
+        ClaudeUsageClient(),
+        AntigravityAvailabilityClient()
+    ]) {
         self.providers = providers
         providers.forEach { provider in
             provider.onUpdate = { [weak self] usage in

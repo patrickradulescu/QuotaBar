@@ -23,13 +23,16 @@ The app monitors frontmost application changes through the public `NSWorkspace` 
 - Provider stdout and stderr are not persisted. Only normalized percentages and reset timestamps reach the UI.
 - Provider executables are resolved from fixed locations. Codex and Claude must pass strict Developer ID signature checks before launch.
 - Provider helpers receive a minimal allowlisted environment so unrelated shell secrets are never forwarded.
-- QuotaBar contains no automatic updater and no telemetry SDK.
+- QuotaBar contains no automatic installer and no telemetry SDK.
+- The user-initiated update checker makes one ephemeral HTTPS request to GitHub's public latest-release API. It accepts only published stable versions and a release URL under `https://github.com/patrickradulescu/QuotaBar/releases/`; it does not download or execute code.
 
 Claude Code may update its own session/history metadata as part of an interactive `/usage` session. That storage remains managed by Anthropic's signed CLI; QuotaBar never opens it and reuses a single helper while the eligible app remains active.
 
 After a crash, QuotaBar checks same-user process metadata for an orphaned `/usr/bin/script` process with parent PID 1. It sends `SIGTERM` only when the executable path, full expected safe-mode argument shape, and the `QuotaBar-Usage-Probe-v1` marker all match twice. Process arguments are never logged or persisted, ordinary Claude sessions do not match, and cleanup never uses `SIGKILL`.
 
-Gemini collection is intentionally disabled. The current Gemini CLI may initialize configured hooks, extensions, skills, or MCP servers during startup; QuotaBar will not launch it periodically until those integrations can be isolated reliably.
+Gemini quota collection is intentionally disabled because Google Antigravity currently has no supported headless quota command or public machine-readable API. QuotaBar verifies the installed Antigravity bundle against Google LLC's Developer ID, then directs the user to Settings → Models. It never reads Antigravity OAuth tokens, cookies, databases, application containers, process tokens, private loopback APIs, or screen pixels.
+
+QuotaBar will not install source-only updates automatically. A future one-click updater requires Developer-ID-signed and notarized binaries plus signed update metadata; until then, update installation remains an explicit action on the trusted GitHub release page.
 
 The first local release reuses the installed official provider CLI and is intentionally not App-Sandboxed. This is still a smaller permission footprint than Full Disk Access, but it is not the final isolation boundary. The production roadmap is to place pinned provider helpers behind a sandboxed XPC interface that exposes only sanitized usage DTOs.
 
