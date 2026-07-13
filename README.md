@@ -39,6 +39,8 @@ QuotaBar does **not** request Full Disk Access, Accessibility, Screen Recording,
 
 Claude's signed CLI may update its own session/history metadata because `/usage` is an interactive command. QuotaBar reuses one Claude process while an eligible app stays frontmost, never opens those files itself, and stops the helper as soon as you switch away.
 
+If QuotaBar is force-quit, its next launch removes only an orphaned Claude PTY whose full expected argument shape and QuotaBar-specific marker both match. Ordinary Claude sessions are not matched, and cleanup never escalates to `SIGKILL`.
+
 See [SECURITY.md](SECURITY.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the threat model and implementation boundary.
 
 ## Requirements

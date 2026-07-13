@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var snapshots: [ProviderKind: ProviderUsage] = [:]
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        StaleHelperCleaner.terminateOrphanedClaudeProbes()
         configureStatusItem()
 
         coordinator.onChange = { [weak self] snapshots in

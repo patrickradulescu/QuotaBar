@@ -126,7 +126,9 @@ final class ClaudeUsageClient: UsageProviderClient {
             "--strict-mcp-config",
             "--tools",
             "",
-            "--no-chrome"
+            "--no-chrome",
+            "--name",
+            ClaudeProbeIdentity.sessionName
         ]
         process.currentDirectoryURL = workingDirectory
         process.standardInput = inputPipe

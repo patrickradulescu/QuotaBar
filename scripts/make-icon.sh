@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="${0:A:h:h}"
-SOURCE="$ROOT/Assets/AppIcon.svg"
+SOURCE="$ROOT/Assets/AppIcon-1024.png"
 OUTPUT="${1:-$ROOT/.build/QuotaBar.icns}"
 ICONSET="$(mktemp -d /tmp/quotabar-icon.XXXXXX)/QuotaBar.iconset"
 
@@ -16,7 +16,11 @@ mkdir -p "$ICONSET" "${OUTPUT:h}"
 render() {
   local pixels="$1"
   local filename="$2"
-  /opt/homebrew/bin/magick -background none "$SOURCE" -resize "${pixels}x${pixels}" "$ICONSET/$filename"
+  /usr/bin/sips \
+    --resampleHeightWidth "$pixels" "$pixels" \
+    "$SOURCE" \
+    --out "$ICONSET/$filename" \
+    >/dev/null
 }
 
 render 16 icon_16x16.png

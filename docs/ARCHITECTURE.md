@@ -25,3 +25,7 @@ This project is an original implementation. It does not include source code, art
 - Gemini: activation/parser reserved; collection disabled until CLI startup isolation is proven
 
 Browser-tab detection is intentionally excluded because it would require browser integration or Accessibility access.
+
+## Helper lifecycle
+
+Provider helpers exist only while an allowlisted application is frontmost. Normal shutdown terminates direct children before QuotaBar exits. A force-quit can leave the Claude PTY adopted by launchd, so startup performs a narrowly scoped cleanup: PPID 1, `/usr/bin/script`, the expected safe-mode argument shape, and QuotaBar's unique probe marker must all match immediately before `SIGTERM` is sent.
