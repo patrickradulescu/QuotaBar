@@ -20,8 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.rebuildMenu()
         }
 
-        touchBarController.onEligibilityChange = { [weak self] isEligible in
-            self?.coordinator.setEligibleApplicationActive(isEligible)
+        touchBarController.onActiveProvidersChange = { [weak self] providers in
+            self?.coordinator.setActiveProviders(providers)
         }
 
         coordinator.start()
@@ -66,15 +66,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             menu.addItem(item)
         }
 
-        if snapshots[.gemini]?.state == .actionRequired {
-            let antigravity = NSMenuItem(
-                title: "Open Antigravity Models…",
-                action: #selector(openAntigravityModels),
-                keyEquivalent: ""
-            )
-            antigravity.target = self
-            menu.addItem(antigravity)
-        }
+        let agySetup = NSMenuItem(
+            title: snapshots[.gemini]?.state == .live
+                ? "AGY Quota Setup…"
+                : "Set Up AGY Quota…",
+            action: #selector(setUpAgyQuota),
+            keyEquivalent: ""
+        )
+        agySetup.target = self
+        menu.addItem(agySetup)
+
+        // Keep the official UI fallback available even when the bridge is live
+        // or a future AGY payload no longer parses.
+        let antigravity = NSMenuItem(
+            title: "Open Antigravity Models…",
+            action: #selector(openAntigravityModels),
+            keyEquivalent: ""
+        )
+        antigravity.target = self
+        menu.addItem(antigravity)
 
         menu.addItem(.separator())
 
@@ -181,11 +191,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @objc private func setUpAgyQuota() {
+        let helperURL = Bundle.main.bundleURL
+            .appendingPathComponent("Contents", isDirectory: true)
+            .appendingPathComponent("Helpers", isDirectory: true)
+            .appendingPathComponent("QuotaBarAgyBridge")
+
+        guard FileManager.default.isExecutableFile(atPath: helperURL.path) else {
+            showAlert(
+                message: "AGY bridge is unavailable",
+                information: "Reinstall the current QuotaBar release and try again.",
+                style: .warning
+            )
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let agyURL = CommandLocator.agy()
+            DispatchQueue.main.async {
+                guard let self else { return }
+                guard agyURL != nil else {
+                    self.presentAgyDownloadPrompt()
+                    return
+                }
+                self.presentAgySetupInstructions(helperURL: helperURL)
+            }
+        }
+    }
+
+    private func presentAgyDownloadPrompt() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Official AGY CLI not found"
+        alert.informativeText = "Install and sign in to Google's Antigravity CLI first. QuotaBar accepts only a Google Developer ID-signed agy executable."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open Google Download")
+        alert.addButton(withTitle: "Cancel")
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: "https://antigravity.google/download#antigravity-cli") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func presentAgySetupInstructions(helperURL: URL) {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let command = "/statusline \(Self.shellQuoted(helperURL.path))"
+        let alert = NSAlert()
+        alert.messageText = "Connect AGY quota to QuotaBar"
+        alert.informativeText = "Copy the command below and paste it into the AGY prompt:\n\n\(command)\n\nAGY will send status updates to QuotaBar's bundled helper. The helper stores only Gemini quota fractions, reset times, AGY version, and observation time in QuotaBar's private cache. It never stores the raw payload, account, workspace, or conversation.\n\nAGY supports one statusline command, so this replaces its default display or any custom statusline. Use /statusline delete in AGY to disconnect and restore the default."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Copy Setup Command")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+        showAlert(
+            message: "AGY setup command copied",
+            information: "Paste it into the AGY prompt and press Return. Then choose Refresh Now in QuotaBar if the values do not appear within a minute.",
+            style: .informational
+        )
+    }
+
     private func presentAntigravityInstructions(application: AntigravityApplication) {
         NSApplication.shared.activate(ignoringOtherApps: true)
         let instructions = NSAlert()
         instructions.messageText = "View Gemini quota in Antigravity"
-        instructions.informativeText = "After Antigravity opens, press Command–Comma and select Models. Google currently exposes the five-hour and weekly quota only inside the official app."
+        instructions.informativeText = "After Antigravity opens, press Command–Comma and select Models. This official screen remains the fallback for exact five-hour and weekly values."
         instructions.alertStyle = .informational
         instructions.addButton(withTitle: "Open Antigravity")
         instructions.addButton(withTitle: "Cancel")
@@ -227,12 +299,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     information: "You are running \(current.description). The latest public release is \(latest.version.description).",
                     style: .informational
                 )
-            case .failure:
-                self.showAlert(
-                    message: "Could not check for updates",
-                    information: "QuotaBar could not reach the public GitHub release feed. Check your internet connection and try again.",
-                    style: .warning
-                )
+            case let .failure(error):
+                self.presentUpdateError(error)
             }
         }
     }
@@ -252,6 +320,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if alert.runModal() == .alertFirstButtonReturn {
             NSWorkspace.shared.open(latest.pageURL)
         }
+    }
+
+    private func presentUpdateError(_ error: Error) {
+        let message: String
+        let information: String
+
+        switch error as? UpdateChecker.CheckError {
+        case .invalidCurrentVersion:
+            message = "Could not verify this QuotaBar version"
+            information = "The installed app has invalid version metadata. Reinstall QuotaBar from its official release."
+        case .responseTooLarge, .invalidReleaseFeed:
+            message = "GitHub returned an untrusted release feed"
+            information = "QuotaBar rejected the response and did not open or run anything. Try again later or visit the repository manually."
+        case .rateLimited:
+            message = "GitHub temporarily limited update checks"
+            information = "Wait a few minutes, then choose Check for Updates again."
+        case .serverUnavailable:
+            message = "GitHub releases are temporarily unavailable"
+            information = "The GitHub service returned a server error. Try again later."
+        case .timedOut:
+            message = "The update check timed out"
+            information = "Check your connection and try again. QuotaBar made no changes to the app."
+        case .networkUnavailable:
+            message = "Could not reach GitHub"
+            information = "Check your internet connection and try again."
+        case .invalidResponse, .none:
+            message = "Could not check for updates"
+            information = "GitHub returned an unexpected response. Try again later."
+        }
+
+        showAlert(message: message, information: information, style: .warning)
     }
 
     private func showAlert(message: String, information: String, style: NSAlert.Style) {
@@ -289,6 +388,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 return "Claude: " + parts.joined(separator: " · ")
             }
+            if provider == .gemini {
+                let window = primary.windowMinutes == 300 ? "5H" : "week"
+                var parts = [
+                    "\(window) \(formatPercent(primary.usedPercent))% used",
+                    "\(formatPercent(primary.remainingPercent))% left"
+                ]
+                if let weekly = usage.secondary {
+                    parts.append("week \(formatPercent(weekly.usedPercent))% used")
+                }
+                return "Gemini: " + parts.joined(separator: " · ")
+            }
             return "\(provider.displayName): \(used)% used · \(remaining)% left"
         case .actionRequired:
             return "\(provider.displayName): \(usage.detail ?? "Open provider app")"
@@ -304,6 +414,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "0.3.0"
+            ?? "0.4.0"
+    }
+
+    private static func formatPercent(_ value: Double) -> String {
+        let clamped = min(max(value, 0), 100)
+        if clamped > 0, clamped < 1 {
+            return String(format: "%.2f", clamped)
+        }
+        if clamped != clamped.rounded() {
+            return String(format: "%.1f", clamped)
+        }
+        return String(Int(clamped))
+    }
+
+    private static func shellQuoted(_ value: String) -> String {
+        // AGY executes the statusline through a shell. Always quote the bundle
+        // path instead of trying to maintain a partial metacharacter allowlist.
+        return "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }

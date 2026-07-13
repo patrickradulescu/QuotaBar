@@ -12,6 +12,8 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Verify release version
+        run: ./scripts/verify-release-version.sh
       - name: Test
         run: swift test
       - name: Build release
@@ -22,4 +24,39 @@ jobs:
         run: |
           plutil -lint dist/QuotaBar.app/Contents/Info.plist
           test "$(lipo -archs dist/QuotaBar.app/Contents/MacOS/QuotaBar)" = "x86_64 arm64"
+          test "$(lipo -archs dist/QuotaBar.app/Contents/Helpers/QuotaBarAgyBridge)" = "x86_64 arm64"
+          codesign --verify --strict --verbose=4 dist/QuotaBar.app/Contents/Helpers/QuotaBarAgyBridge
           codesign --verify --deep --strict --verbose=4 dist/QuotaBar.app
+      - name: Smoke-test sanitized AGY bridge
+        run: |
+          HELPER="$PWD/dist/QuotaBar.app/Contents/Helpers/QuotaBarAgyBridge"
+          SMOKE_HOME="$(mktemp -d)"
+          trap 'rm -rf "$SMOKE_HOME"' EXIT
+          FIXTURE='{"version":"1.1.1","account":{"email":"secret@example.com"},"workspace":{"cwd":"/private/work"},"conversation":{"id":"secret-conversation"},"prompt":"secret-prompt","environment":{"API_TOKEN":"secret-token"},"quota":{"gemini-5h":{"remaining_fraction":0.75,"reset_in_seconds":3600},"gemini-weekly":{"remaining_fraction":0.5,"reset_in_seconds":7200},"claude-weekly":{"remaining_fraction":0.1}}}'
+          OUTPUT="$(printf '%s' "$FIXTURE" | env HOME="$SMOKE_HOME" CFFIXED_USER_HOME="$SMOKE_HOME" "$HELPER")"
+          test -n "$OUTPUT"
+          CACHE="$SMOKE_HOME/Library/Application Support/QuotaBar/agy-quota.json"
+          test -f "$CACHE"
+          test "$(stat -f '%Lp' "$CACHE")" = "600"
+          test "$(stat -f '%Lp' "$(dirname "$CACHE")")" = "700"
+          python3 - "$CACHE" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              payload = json.load(handle)
+
+          assert set(payload) == {
+              "fiveHour", "observedAt", "schemaVersion", "sourceVersion", "weekly"
+          }
+          assert set(payload["fiveHour"]) == {"remainingFraction", "resetsAt"}
+          assert set(payload["weekly"]) == {"remainingFraction", "resetsAt"}
+          assert payload["fiveHour"]["remainingFraction"] == 0.75
+          assert payload["weekly"]["remainingFraction"] == 0.5
+          encoded = json.dumps(payload, sort_keys=True)
+          for forbidden in (
+              "secret@example.com", "/private/work", "secret-conversation",
+              "secret-prompt", "secret-token", "claude-weekly"
+          ):
+              assert forbidden not in encoded
+          PY

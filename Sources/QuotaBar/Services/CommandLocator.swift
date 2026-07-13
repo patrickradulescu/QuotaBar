@@ -26,6 +26,18 @@ enum CommandLocator {
         )
     }
 
+    static func agy() -> URL? {
+        firstSignedExecutable(
+            [
+                "\(NSHomeDirectory())/.local/bin/agy",
+                "/opt/homebrew/bin/agy",
+                "/usr/local/bin/agy"
+            ],
+            teamIdentifier: "EQHXZ8M8AV",
+            signingIdentifier: "cli"
+        )
+    }
+
     private static func firstSignedExecutable(
         _ candidates: [String],
         teamIdentifier: String,

@@ -7,7 +7,8 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "QuotaBar", targets: ["QuotaBar"])
+        .executable(name: "QuotaBar", targets: ["QuotaBar"]),
+        .executable(name: "QuotaBarAgyBridge", targets: ["QuotaBarAgyBridge"])
     ],
     targets: [
         .target(
@@ -15,6 +16,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "QuotaBar",
+            dependencies: ["QuotaBarCore"]
+        ),
+        .executableTarget(
+            name: "QuotaBarAgyBridge",
             dependencies: ["QuotaBarCore"]
         ),
         .testTarget(
